@@ -1,0 +1,69 @@
+[PHP]
+; Maximum execution time of each script
+max_execution_time = 300
+
+; Maximum amount of time each script may spend parsing request data
+max_input_time = 300
+
+; Maximum amount of memory a script may consume
+memory_limit = 256M
+
+; Maximum size of POST data that PHP will accept
+post_max_size = 32M
+
+; Maximum allowed size for uploaded files
+upload_max_filesize = 32M
+
+; Whether to allow HTTP file uploads
+file_uploads = On
+
+; Maximum number of files that can be uploaded via a single request
+max_file_uploads = 20
+
+; PHP error reporting level
+error_reporting = E_ALL & ~E_DEPRECATED & ~E_STRICT
+
+; Display errors to the screen
+display_errors = Off
+
+; Log errors to specified file
+log_errors = On
+error_log = /var/log/php_errors.log
+
+; Maximum amount of memory allocated to store the results
+realpath_cache_size = 4096K
+
+; Time to live for realpath cache entries
+realpath_cache_ttl = 600
+
+; OPcache configuration
+opcache.enable=1
+opcache.memory_consumption=256
+opcache.interned_strings_buffer=16
+opcache.max_accelerated_files=16000
+opcache.validate_timestamps=0
+opcache.save_comments=1
+opcache.fast_shutdown=0
+
+; Session handling
+session.gc_maxlifetime = 7200
+session.save_handler = files
+session.save_path = "/tmp"
+session.use_strict_mode = 1
+session.use_cookies = 1
+session.use_only_cookies = 1
+session.name = PHPSESSID
+session.auto_start = 0
+session.cookie_lifetime = 0
+session.cookie_path = /
+session.cookie_domain =
+session.cookie_httponly = 1
+session.cookie_samesite = "Lax"
+
+; Security related
+expose_php = Off
+allow_url_fopen = On
+allow_url_include = Off
+sql.safe_mode = Off
+magic_quotes_gpc = Off
+register_globals = Off

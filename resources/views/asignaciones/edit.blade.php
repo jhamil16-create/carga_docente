@@ -33,6 +33,10 @@
             <small style="color: #666;">{{ $asignacion->grupo->materia->codigo_materia }} - {{ $asignacion->grupo->materia->nombre_materia }}</small>
         </div>
         <div>
+            <strong>Docente:</strong> {{ $asignacion->docente->usuario->nombre }} {{ $asignacion->docente->usuario->apellido }}<br>
+            <small style="color: #666;">{{ $asignacion->docente->usuario->email_institucional }}</small>
+        </div>
+        <div>
             <strong>Horario:</strong> 
             @php
                 $dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -43,12 +47,6 @@
         <div>
             <strong>Aula:</strong> {{ $asignacion->aula->nombre_aula }}<br>
             <small style="color: #666;">{{ $asignacion->aula->ubicacion }} (Cap: {{ $asignacion->aula->capacidad }})</small>
-        </div>
-        <div>
-            <strong>Creada:</strong> {{ $asignacion->created_at->format('d/m/Y H:i') }}<br>
-            @if($asignacion->updated_at != $asignacion->created_at)
-                <small style="color: #666;">Modificada: {{ $asignacion->updated_at->format('d/m/Y H:i') }}</small>
-            @endif
         </div>
     </div>
 </div>
@@ -72,11 +70,8 @@
                             data-materia="{{ $grupo->materia->nombre_materia }}"
                             data-codigo="{{ $grupo->materia->codigo_materia }}"
                             data-creditos="{{ $grupo->materia->creditos }}"
-                            data-docente="{{ $grupo->docente->name ?? 'Sin asignar' }}"
-                            data-estudiantes="{{ $grupo->estudiantes_inscritos ?? 0 }}"
-                            data-estado="{{ $grupo->estado }}">
+                            data-capacidad="{{ $grupo->capacidad_maxima }}">
                         {{ $grupo->nombre_grupo }} - {{ $grupo->materia->codigo_materia }} ({{ $grupo->materia->nombre_materia }})
-                        @if($grupo->docente) - {{ $grupo->docente->name }} @endif
                     </option>
                 @endforeach
             </select>
@@ -89,6 +84,36 @@
         <div id="grupo-info" style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin-bottom: 25px; display: none; border-left: 4px solid #2196f3;">
             <h3 style="margin: 0 0 15px 0; color: #1976d2;">📚 Información del Grupo Seleccionado</h3>
             <div id="grupo-details" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;"></div>
+        </div>
+
+        <!-- Selección de Docente -->
+        <div style="margin-bottom: 25px;">
+            <label for="docente_id" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
+                Docente <span style="color: #dc3545;">*</span>
+            </label>
+            <select name="docente_id" id="docente_id" required
+                    style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 16px; background: white;">
+                <option value="">Seleccione un docente</option>
+                @foreach($docentes as $docente)
+                    <option value="{{ $docente->docente_id }}" 
+                            {{ (old('docente_id', $asignacion->docente_id) == $docente->docente_id) ? 'selected' : '' }}
+                            data-nombre="{{ $docente->usuario->nombre }} {{ $docente->usuario->apellido }}"
+                            data-email="{{ $docente->usuario->email_institucional }}"
+                            data-codigo="{{ $docente->usuario->codigo_usuario }}"
+                            data-especialidad="{{ $docente->especialidad ?? 'N/A' }}">
+                        {{ $docente->usuario->nombre }} {{ $docente->usuario->apellido }} ({{ $docente->usuario->codigo_usuario }})
+                    </option>
+                @endforeach
+            </select>
+            @error('docente_id')
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ $message }}</div>
+            @enderror
+        </div>
+
+        <!-- Información del docente seleccionado -->
+        <div id="docente-info" style="background: #fff3e0; padding: 20px; border-radius: 8px; margin-bottom: 25px; display: none; border-left: 4px solid #ff9800;">
+            <h3 style="margin: 0 0 15px 0; color: #f57c00;">👨‍🏫 Información del Docente Seleccionado</h3>
+            <div id="docente-details" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;"></div>
         </div>
 
         <!-- Selección de Horario -->
@@ -159,12 +184,6 @@
             <div id="aula-details" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;"></div>
         </div>
 
-        <!-- Verificación de conflictos -->
-        <div id="conflictos-warning" style="background: #fff3cd; color: #856404; padding: 20px; border-radius: 8px; margin-bottom: 25px; display: none; border: 1px solid #ffeaa7;">
-            <h3 style="margin: 0 0 15px 0;">⚠️ Conflictos Detectados</h3>
-            <div id="conflictos-list"></div>
-        </div>
-
         <!-- Verificación de capacidad -->
         <div id="capacidad-warning" style="background: #f8d7da; color: #721c24; padding: 20px; border-radius: 8px; margin-bottom: 25px; display: none; border: 1px solid #f5c6cb;">
             <h3 style="margin: 0 0 10px 0;">🚨 Advertencia de Capacidad</h3>
@@ -218,19 +237,20 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const grupoSelect = document.getElementById('grupo_id');
+    const docenteSelect = document.getElementById('docente_id');
     const horarioSelect = document.getElementById('horario_id');
     const aulaSelect = document.getElementById('aula_id');
     const submitBtn = document.getElementById('submit-btn');
     
     const grupoInfo = document.getElementById('grupo-info');
     const grupoDetails = document.getElementById('grupo-details');
+    const docenteInfo = document.getElementById('docente-info');
+    const docenteDetails = document.getElementById('docente-details');
     const horarioInfo = document.getElementById('horario-info');
     const horarioDetails = document.getElementById('horario-details');
     const aulaInfo = document.getElementById('aula-info');
     const aulaDetails = document.getElementById('aula-details');
     
-    const conflictosWarning = document.getElementById('conflictos-warning');
-    const conflictosList = document.getElementById('conflictos-list');
     const capacidadWarning = document.getElementById('capacidad-warning');
     const capacidadText = document.getElementById('capacidad-text');
     const cambiosDetectados = document.getElementById('cambios-detectados');
@@ -241,6 +261,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Valores originales para detectar cambios
     const valoresOriginales = {
         grupo_id: '{{ $asignacion->grupo_id }}',
+        docente_id: '{{ $asignacion->docente_id }}',
         horario_id: '{{ $asignacion->horario_id }}',
         aula_id: '{{ $asignacion->aula_id }}'
     };
@@ -252,20 +273,40 @@ document.addEventListener('DOMContentLoaded', function() {
             const materia = selectedOption.dataset.materia;
             const codigo = selectedOption.dataset.codigo;
             const creditos = selectedOption.dataset.creditos;
-            const docente = selectedOption.dataset.docente;
-            const estudiantes = selectedOption.dataset.estudiantes;
-            const estado = selectedOption.dataset.estado;
+            const capacidad = selectedOption.dataset.capacidad;
             
             grupoDetails.innerHTML = `
                 <div><strong>Materia:</strong> ${codigo} - ${materia}</div>
                 <div><strong>Créditos:</strong> ${creditos}</div>
-                <div><strong>Docente:</strong> ${docente}</div>
-                <div><strong>Estudiantes:</strong> ${estudiantes}</div>
-                <div><strong>Estado:</strong> <span style="background: ${estado === 'activo' ? '#28a745' : '#dc3545'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${estado.charAt(0).toUpperCase() + estado.slice(1)}</span></div>
+                <div><strong>Capacidad:</strong> ${capacidad} estudiantes</div>
             `;
             grupoInfo.style.display = 'block';
         } else {
             grupoInfo.style.display = 'none';
+        }
+        detectarCambios();
+        verificarCapacidad();
+        verificarFormulario();
+    }
+
+    // Mostrar información del docente seleccionado
+    function mostrarInfoDocente() {
+        const selectedOption = docenteSelect.options[docenteSelect.selectedIndex];
+        if (selectedOption.value) {
+            const nombre = selectedOption.dataset.nombre;
+            const email = selectedOption.dataset.email;
+            const codigo = selectedOption.dataset.codigo;
+            const especialidad = selectedOption.dataset.especialidad;
+            
+            docenteDetails.innerHTML = `
+                <div><strong>Nombre:</strong> ${nombre}</div>
+                <div><strong>Email:</strong> ${email}</div>
+                <div><strong>Código:</strong> ${codigo}</div>
+                <div><strong>Especialidad:</strong> ${especialidad}</div>
+            `;
+            docenteInfo.style.display = 'block';
+        } else {
+            docenteInfo.style.display = 'none';
         }
         detectarCambios();
         verificarFormulario();
@@ -291,7 +332,6 @@ document.addEventListener('DOMContentLoaded', function() {
             horarioInfo.style.display = 'none';
         }
         detectarCambios();
-        verificarConflictos();
         verificarFormulario();
     }
 
@@ -314,7 +354,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         detectarCambios();
         verificarCapacidad();
-        verificarConflictos();
         verificarFormulario();
     }
 
@@ -322,17 +361,22 @@ document.addEventListener('DOMContentLoaded', function() {
     function detectarCambios() {
         const cambios = [];
         
-        if (grupoSelect.value !== valoresOriginales.grupo_id) {
+        if (grupoSelect.value !== valoresOriginales.grupo_id && grupoSelect.value) {
             const grupoOption = grupoSelect.options[grupoSelect.selectedIndex];
             cambios.push(`Grupo: ${grupoOption.textContent}`);
         }
         
-        if (horarioSelect.value !== valoresOriginales.horario_id) {
+        if (docenteSelect.value !== valoresOriginales.docente_id && docenteSelect.value) {
+            const docenteOption = docenteSelect.options[docenteSelect.selectedIndex];
+            cambios.push(`Docente: ${docenteOption.dataset.nombre}`);
+        }
+        
+        if (horarioSelect.value !== valoresOriginales.horario_id && horarioSelect.value) {
             const horarioOption = horarioSelect.options[horarioSelect.selectedIndex];
             cambios.push(`Horario: ${horarioOption.textContent}`);
         }
         
-        if (aulaSelect.value !== valoresOriginales.aula_id) {
+        if (aulaSelect.value !== valoresOriginales.aula_id && aulaSelect.value) {
             const aulaOption = aulaSelect.options[aulaSelect.selectedIndex];
             cambios.push(`Aula: ${aulaOption.textContent}`);
         }
@@ -351,38 +395,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Verificar conflictos de horario y aula
-    function verificarConflictos() {
-        if (!horarioSelect.value || !aulaSelect.value) {
-            conflictosWarning.style.display = 'none';
-            return;
-        }
-
-        // Simulación de conflictos (en producción esto vendría del servidor)
-        const conflictos = [];
-        const probabilidadConflicto = Math.random();
-        
-        if (probabilidadConflicto < 0.2) { // 20% de probabilidad para demo
-            conflictos.push({
-                tipo: 'aula_ocupada',
-                mensaje: 'El aula ya está ocupada en este horario por otro grupo'
-            });
-        }
-        
-        if (conflictos.length > 0) {
-            let conflictosHtml = '<ul style="margin: 0; padding-left: 20px;">';
-            conflictos.forEach(conflicto => {
-                conflictosHtml += `<li>${conflicto.mensaje}</li>`;
-            });
-            conflictosHtml += '</ul>';
-            
-            conflictosList.innerHTML = conflictosHtml;
-            conflictosWarning.style.display = 'block';
-        } else {
-            conflictosWarning.style.display = 'none';
-        }
-    }
-
     // Verificar capacidad del aula vs estudiantes
     function verificarCapacidad() {
         if (!grupoSelect.value || !aulaSelect.value) {
@@ -393,19 +405,22 @@ document.addEventListener('DOMContentLoaded', function() {
         const grupoOption = grupoSelect.options[grupoSelect.selectedIndex];
         const aulaOption = aulaSelect.options[aulaSelect.selectedIndex];
         
-        const estudiantes = parseInt(grupoOption.dataset.estudiantes) || 0;
-        const capacidad = parseInt(aulaOption.dataset.capacidad) || 0;
+        const capacidadGrupo = parseInt(grupoOption.dataset.capacidad) || 0;
+        const capacidadAula = parseInt(aulaOption.dataset.capacidad) || 0;
         
-        if (estudiantes > capacidad) {
+        if (capacidadGrupo > capacidadAula) {
             capacidadText.innerHTML = `
-                El grupo tiene <strong>${estudiantes} estudiantes</strong> pero el aula solo tiene capacidad para <strong>${capacidad}</strong>.
-                <br>Esto excede la capacidad en <strong>${estudiantes - capacidad} estudiante(s)</strong>.
+                El grupo tiene capacidad para <strong>${capacidadGrupo} estudiantes</strong> pero el aula solo tiene capacidad para <strong>${capacidadAula}</strong>.
+                <br>Esto excede la capacidad en <strong>${capacidadGrupo - capacidadAula} estudiante(s)</strong>.
                 <br><em>Se recomienda seleccionar un aula con mayor capacidad.</em>
             `;
             capacidadWarning.style.display = 'block';
-        } else if (estudiantes > 0 && (estudiantes / capacidad) > 0.9) {
+            capacidadWarning.style.background = '#f8d7da';
+            capacidadWarning.style.color = '#721c24';
+            capacidadWarning.style.borderColor = '#f5c6cb';
+        } else if (capacidadGrupo > 0 && (capacidadGrupo / capacidadAula) > 0.9) {
             capacidadText.innerHTML = `
-                El aula estará al <strong>${Math.round((estudiantes / capacidad) * 100)}%</strong> de su capacidad.
+                El aula estará al <strong>${Math.round((capacidadGrupo / capacidadAula) * 100)}%</strong> de su capacidad.
                 <br>Considere si hay suficiente espacio para comodidad de los estudiantes.
             `;
             capacidadWarning.style.display = 'block';
@@ -419,27 +434,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Mostrar resumen de la asignación
     function mostrarResumen() {
-        if (!grupoSelect.value || !horarioSelect.value || !aulaSelect.value) {
+        if (!grupoSelect.value || !docenteSelect.value || !horarioSelect.value || !aulaSelect.value) {
             resumenAsignacion.style.display = 'none';
             return;
         }
 
         const grupoOption = grupoSelect.options[grupoSelect.selectedIndex];
+        const docenteOption = docenteSelect.options[docenteSelect.selectedIndex];
         const horarioOption = horarioSelect.options[horarioSelect.selectedIndex];
         const aulaOption = aulaSelect.options[aulaSelect.selectedIndex];
         
         resumenDetails.innerHTML = `
             <div>
-                <strong>Grupo:</strong> ${grupoOption.textContent}
+                <strong>Grupo:</strong><br>${grupoOption.textContent}
             </div>
             <div>
-                <strong>Horario:</strong> ${horarioOption.textContent}
+                <strong>Docente:</strong><br>${docenteOption.dataset.nombre}
             </div>
             <div>
-                <strong>Aula:</strong> ${aulaOption.textContent}
+                <strong>Horario:</strong><br>${horarioOption.textContent}
             </div>
             <div>
-                <strong>Ocupación:</strong> ${grupoOption.dataset.estudiantes}/${aulaOption.dataset.capacidad} estudiantes
+                <strong>Aula:</strong><br>${aulaOption.textContent}
             </div>
         `;
         resumenAsignacion.style.display = 'block';
@@ -448,43 +464,36 @@ document.addEventListener('DOMContentLoaded', function() {
     // Verificar si el formulario está completo y válido
     function verificarFormulario() {
         const grupoValido = grupoSelect.value !== '';
+        const docenteValido = docenteSelect.value !== '';
         const horarioValido = horarioSelect.value !== '';
         const aulaValida = aulaSelect.value !== '';
-        const sinConflictos = conflictosWarning.style.display === 'none';
         
-        if (grupoValido && horarioValido && aulaValida) {
+        if (grupoValido && docenteValido && horarioValido && aulaValida) {
             mostrarResumen();
-            
-            if (sinConflictos) {
-                submitBtn.disabled = false;
-                submitBtn.style.cursor = 'pointer';
-                submitBtn.style.opacity = '1';
-                submitBtn.style.background = '#28a745';
-                submitBtn.textContent = 'Actualizar Asignación';
-            } else {
-                submitBtn.disabled = true;
-                submitBtn.style.cursor = 'not-allowed';
-                submitBtn.style.opacity = '0.6';
-                submitBtn.style.background = '#dc3545';
-                submitBtn.textContent = 'Resolver Conflictos Primero';
-            }
+            submitBtn.disabled = false;
+            submitBtn.style.cursor = 'pointer';
+            submitBtn.style.opacity = '1';
+            submitBtn.style.background = '#28a745';
+            submitBtn.textContent = 'Actualizar Asignación';
         } else {
             submitBtn.disabled = true;
             submitBtn.style.cursor = 'not-allowed';
             submitBtn.style.opacity = '0.6';
             submitBtn.style.background = '#6c757d';
-            submitBtn.textContent = 'Actualizar Asignación';
+            submitBtn.textContent = 'Complete todos los campos';
             resumenAsignacion.style.display = 'none';
         }
     }
 
     // Event listeners
     grupoSelect.addEventListener('change', mostrarInfoGrupo);
+    docenteSelect.addEventListener('change', mostrarInfoDocente);
     horarioSelect.addEventListener('change', mostrarInfoHorario);
     aulaSelect.addEventListener('change', mostrarInfoAula);
 
     // Inicializar con valores actuales
     mostrarInfoGrupo();
+    mostrarInfoDocente();
     mostrarInfoHorario();
     mostrarInfoAula();
 });

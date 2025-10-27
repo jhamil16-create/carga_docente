@@ -2,26 +2,26 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Materia extends Model
 {
-    use HasFactory;
-
-    protected $table = 'materias';
+    protected $table = 'materia';
     protected $primaryKey = 'materia_id';
-    
+    public $timestamps = false;
+
     protected $fillable = [
         'nombre_materia',
         'codigo_materia',
         'creditos'
     ];
 
-    /**
-     * Relación con grupos
-     */
-    public function grupos()
+    protected $casts = [
+        'creditos' => 'integer',
+    ];
+
+    public function grupos(): HasMany
     {
         return $this->hasMany(Grupo::class, 'materia_id', 'materia_id');
     }

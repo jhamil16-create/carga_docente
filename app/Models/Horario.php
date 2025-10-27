@@ -2,16 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Horario extends Model
 {
-    use HasFactory;
-
-    protected $table = 'horarios';
+    protected $table = 'horario';
     protected $primaryKey = 'horario_id';
-    
+    public $timestamps = false;
+
     protected $fillable = [
         'dia_semana',
         'hora_inicio',
@@ -19,14 +18,11 @@ class Horario extends Model
     ];
 
     protected $casts = [
-        'hora_inicio' => 'datetime:H:i',
-        'hora_fin' => 'datetime:H:i',
+        'hora_inicio' => 'datetime:H:i:s',
+        'hora_fin' => 'datetime:H:i:s',
     ];
 
-    /**
-     * Relación con asignaciones
-     */
-    public function asignaciones()
+    public function asignaciones(): HasMany
     {
         return $this->hasMany(Asignacion::class, 'horario_id', 'horario_id');
     }

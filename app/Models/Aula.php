@@ -9,8 +9,9 @@ class Aula extends Model
 {
     use HasFactory;
 
-    protected $table = 'aulas';
+    protected $table = 'aula';
     protected $primaryKey = 'aula_id';
+    public $timestamps = false;
     
     protected $fillable = [
         'nombre_aula',

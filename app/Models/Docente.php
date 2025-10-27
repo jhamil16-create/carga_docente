@@ -2,16 +2,16 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Docente extends Model
 {
-    use HasFactory;
-
-    protected $table = 'docentes';
+    protected $table = 'docente';
     protected $primaryKey = 'docente_id';
-    
+    public $timestamps = false;
+
     protected $fillable = [
         'usuario_id',
         'especialidad',
@@ -20,37 +20,21 @@ class Docente extends Model
     ];
 
     protected $casts = [
-        'fecha_registro' => 'date',
+        'fecha_registro' => 'datetime',
     ];
 
-    /**
-     * Relación con usuario
-     */
-    public function usuario()
+    public function usuario(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'usuario_id', 'usuario_id');
+        return $this->belongsTo(Usuario::class, 'usuario_id', 'usuario_id');
     }
 
-    /**
-     * Relación con asignaciones
-     */
-    public function asignaciones()
+    public function asignaciones(): HasMany
     {
         return $this->hasMany(Asignacion::class, 'docente_id', 'docente_id');
     }
 
-    /**
-     * Relación con grupos a través de asignaciones
-     */
-    public function grupos()
+    public function asistencias(): HasMany
     {
-        return $this->hasManyThrough(
-            Grupo::class,
-            Asignacion::class,
-            'docente_id',
-            'grupo_id',
-            'docente_id',
-            'grupo_id'
-        );
+        return $this->hasMany(Asistencia::class, 'docente_id', 'docente_id');
     }
 }

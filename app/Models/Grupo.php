@@ -2,50 +2,34 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Grupo extends Model
 {
-    use HasFactory;
-
-    protected $table = 'grupos';
+    protected $table = 'grupo';
     protected $primaryKey = 'grupo_id';
-    
+    public $timestamps = false;
+
     protected $fillable = [
         'materia_id',
         'nombre_grupo',
         'capacidad_maxima'
     ];
 
-    /**
-     * Relación con materia
-     */
-    public function materia()
+    protected $casts = [
+        'capacidad_maxima' => 'integer',
+        'materia_id' => 'integer'
+    ];
+
+    public function materia(): BelongsTo
     {
         return $this->belongsTo(Materia::class, 'materia_id', 'materia_id');
     }
 
-    /**
-     * Relación con asignaciones
-     */
-    public function asignaciones()
+    public function asignaciones(): HasMany
     {
         return $this->hasMany(Asignacion::class, 'grupo_id', 'grupo_id');
-    }
-
-    /**
-     * Relación con docentes a través de asignaciones
-     */
-    public function docentes()
-    {
-        return $this->hasManyThrough(
-            Docente::class,
-            Asignacion::class,
-            'grupo_id',
-            'docente_id',
-            'grupo_id',
-            'docente_id'
-        );
     }
 }

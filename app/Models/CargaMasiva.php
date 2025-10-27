@@ -9,20 +9,18 @@ class CargaMasiva extends Model
 {
     use HasFactory;
 
-    protected $table = 'carga_masiva';
+    protected $table = 'cargamasiva';
     protected $primaryKey = 'carga_id';
+    public $timestamps = false;
     
     protected $fillable = [
-        'usuario_id',
-        'tipo_carga',
-        'nombre_archivo',
+        'archivo_nombre',        
         'fecha_carga',
-        'registros_procesados',
         'registros_exitosos',
         'registros_fallidos',
-        'estado'
+        'usuario_admin_id' 
     ];
-
+    
     protected $casts = [
         'fecha_carga' => 'datetime',
     ];
@@ -32,7 +30,7 @@ class CargaMasiva extends Model
      */
     public function usuario()
     {
-        return $this->belongsTo(User::class, 'usuario_id', 'usuario_id');
+        return $this->belongsTo(Usuario::class, 'usuario_admin_id', 'usuario_id');
     }
 
     /**
@@ -41,21 +39,5 @@ class CargaMasiva extends Model
     public function errores()
     {
         return $this->hasMany(ErrorCarga::class, 'carga_id', 'carga_id');
-    }
-
-    /**
-     * Scope para filtrar por estado
-     */
-    public function scopePorEstado($query, $estado)
-    {
-        return $query->where('estado', $estado);
-    }
-
-    /**
-     * Scope para filtrar por tipo de carga
-     */
-    public function scopePorTipo($query, $tipo)
-    {
-        return $query->where('tipo_carga', $tipo);
     }
 }

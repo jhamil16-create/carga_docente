@@ -1,254 +1,191 @@
 @extends('layouts.app')
 
 @section('content')
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-    <h1 style="margin: 0; color: #333;">Editar Grupo: {{ $grupo->nombre_grupo }}</h1>
-    <div style="display: flex; gap: 10px;">
-        <a href="{{ route('grupos.show', $grupo) }}" style="background: #17a2b8; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: 500;">
-            Ver Detalle
-        </a>
-        <a href="{{ route('grupos.index') }}" style="background: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: 500;">
-            ← Volver
-        </a>
-    </div>
-</div>
-
-@if($errors->any())
-    <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #f5c6cb;">
-        <h4 style="margin: 0 0 10px 0;">Por favor corrige los siguientes errores:</h4>
-        <ul style="margin: 0; padding-left: 20px;">
-            @foreach($errors->all() as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div>
-@endif
-
-<!-- Información actual del grupo -->
-<div style="background: #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-    <h3 style="margin: 0 0 15px 0; color: #495057;">Información Actual</h3>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-        <div>
-            <strong>Materia:</strong> {{ $grupo->materia->nombre_materia }}
-        </div>
-        <div>
-            <strong>Código:</strong> {{ $grupo->materia->codigo_materia }}
-        </div>
-        <div>
-            <strong>Docente:</strong> {{ $grupo->docente->name ?? 'Sin asignar' }}
-        </div>
-        <div>
-            <strong>Estudiantes:</strong> {{ $grupo->estudiantes_inscritos ?? 0 }}
-        </div>
-        <div>
-            <strong>Asignaciones:</strong> 
-            <span style="background: #28a745; color: white; padding: 2px 8px; border-radius: 12px; font-size: 14px;">
-                {{ $grupo->asignaciones->count() }}
-            </span>
-        </div>
-        <div>
-            <strong>Estado:</strong> 
-            <span style="background: {{ $grupo->estado == 'activo' ? '#28a745' : '#dc3545' }}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 14px;">
-                {{ ucfirst($grupo->estado) }}
-            </span>
-        </div>
-    </div>
-</div>
-
-<div style="background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 30px;">
-    <form method="POST" action="{{ route('grupos.update', $grupo) }}">
-        @csrf
-        @method('PUT')
-        
-        <div style="margin-bottom: 25px;">
-            <label for="nombre_grupo" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
-                Nombre del Grupo <span style="color: #dc3545;">*</span>
-            </label>
-            <input type="text" name="nombre_grupo" id="nombre_grupo" 
-                   value="{{ old('nombre_grupo', $grupo->nombre_grupo) }}" required
-                   placeholder="Ej: Grupo A, Sección 1, etc."
-                   style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 16px;">
-            @error('nombre_grupo')
-                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ $message }}</div>
-            @enderror
-            <div style="font-size: 14px; color: #666; margin-top: 5px;">
-                Nombre identificativo del grupo (máximo 50 caracteres)
-            </div>
-        </div>
-
-        <div style="margin-bottom: 25px;">
-            <label for="materia_id" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
-                Materia <span style="color: #dc3545;">*</span>
-            </label>
-            <select name="materia_id" id="materia_id" required
-                    style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 16px; background: white;">
-                <option value="">Seleccione una materia</option>
-                @foreach($materias as $materia)
-                    <option value="{{ $materia->materia_id }}" 
-                            {{ old('materia_id', $grupo->materia_id) == $materia->materia_id ? 'selected' : '' }}
-                            data-creditos="{{ $materia->creditos }}">
-                        {{ $materia->codigo_materia }} - {{ $materia->nombre_materia }} ({{ $materia->creditos }} créditos)
-                    </option>
-                @endforeach
-            </select>
-            @error('materia_id')
-                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ $message }}</div>
-            @enderror
-            @if($grupo->asignaciones->count() > 0)
-                <div style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 4px; margin-top: 5px; font-size: 14px;">
-                    ⚠️ Cambiar la materia afectará las {{ $grupo->asignaciones->count() }} asignación(es) existente(s)
-                </div>
-            @endif
-        </div>
-
-        <div style="margin-bottom: 25px;">
-            <label for="docente_id" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
-                Docente Asignado
-            </label>
-            <select name="docente_id" id="docente_id"
-                    style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 16px; background: white;">
-                <option value="">Sin asignar</option>
-                @foreach($docentes as $docente)
-                    <option value="{{ $docente->id }}" 
-                            {{ old('docente_id', $grupo->docente_id) == $docente->id ? 'selected' : '' }}>
-                        {{ $docente->name }} - {{ $docente->email }}
-                    </option>
-                @endforeach
-            </select>
-            @error('docente_id')
-                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ $message }}</div>
-            @enderror
-            <div style="font-size: 14px; color: #666; margin-top: 5px;">
-                El docente puede cambiarse en cualquier momento
-            </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
-            <div>
-                <label for="estudiantes_inscritos" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
-                    Estudiantes Inscritos
-                </label>
-                <input type="number" name="estudiantes_inscritos" id="estudiantes_inscritos" 
-                       value="{{ old('estudiantes_inscritos', $grupo->estudiantes_inscritos ?? 0) }}" 
-                       min="0" max="100"
-                       style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 16px;">
-                @error('estudiantes_inscritos')
-                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ $message }}</div>
-                @enderror
-                <div style="font-size: 14px; color: #666; margin-top: 5px;">
-                    Número actual de estudiantes (0-100)
-                </div>
-            </div>
-
-            <div>
-                <label for="estado" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
-                    Estado <span style="color: #dc3545;">*</span>
-                </label>
-                <select name="estado" id="estado" required
-                        style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 16px; background: white;">
-                    <option value="activo" {{ old('estado', $grupo->estado) == 'activo' ? 'selected' : '' }}>Activo</option>
-                    <option value="inactivo" {{ old('estado', $grupo->estado) == 'inactivo' ? 'selected' : '' }}>Inactivo</option>
-                </select>
-                @error('estado')
-                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ $message }}</div>
-                @enderror
-                @if($grupo->asignaciones->count() > 0)
-                    <div style="font-size: 14px; color: #856404; margin-top: 5px;">
-                        ⚠️ Desactivar afectará las asignaciones activas
-                    </div>
-                @endif
-            </div>
-        </div>
-
-        <div style="margin-bottom: 25px;">
-            <label for="descripcion" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
-                Descripción
-            </label>
-            <textarea name="descripcion" id="descripcion" rows="4" 
-                      placeholder="Descripción opcional del grupo, horarios especiales, observaciones, etc."
-                      style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 16px; resize: vertical;">{{ old('descripcion', $grupo->descripcion) }}</textarea>
-            @error('descripcion')
-                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ $message }}</div>
-            @enderror
-            <div id="descripcion-counter" style="font-size: 14px; color: #666; margin-top: 5px; text-align: right;">
-                0 / 500 caracteres
-            </div>
-        </div>
-
-        <!-- Información de la materia seleccionada -->
-        <div id="materia-info" style="background: #e9ecef; padding: 15px; border-radius: 6px; margin-bottom: 25px;">
-            <h4 style="margin: 0 0 10px 0; color: #495057;">Información de la Materia:</h4>
-            <div id="materia-details" style="color: #666;"></div>
-        </div>
-
-        <!-- Advertencia sobre capacidad -->
-        <div id="capacidad-warning" style="background: #fff3cd; color: #856404; padding: 15px; border-radius: 6px; margin-bottom: 25px; display: none; border: 1px solid #ffeaa7;">
-            <h4 style="margin: 0 0 5px 0;">⚠️ Advertencia de Capacidad</h4>
-            <p id="capacidad-text" style="margin: 0;"></p>
-        </div>
-
-        <div style="display: flex; gap: 15px; justify-content: flex-end;">
-            <a href="{{ route('grupos.show', $grupo) }}" 
-               style="background: #6c757d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">
-                Cancelar
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-edit"></i> Editar Grupo: {{ $grupo->nombre_grupo }}</h2>
+        <div class="btn-group">
+            <a href="{{ route('grupos.show', $grupo->grupo_id) }}" class="btn btn-info">
+                <i class="fas fa-eye"></i> Ver Detalle
             </a>
-            <button type="submit" 
-                    style="background: #ffc107; color: #212529; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 16px;">
-                Actualizar Grupo
-            </button>
+            <a href="{{ route('grupos.index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
         </div>
-    </form>
-</div>
-
-<!-- Asignaciones afectadas -->
-@if($grupo->asignaciones->count() > 0)
-<div style="background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 20px; margin-top: 20px;">
-    <h3 style="margin: 0 0 15px 0; color: #333;">Asignaciones que serán afectadas</h3>
-    <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead style="background: #f8f9fa;">
-                <tr>
-                    <th style="padding: 10px; text-align: left; border-bottom: 1px solid #dee2e6;">Horario</th>
-                    <th style="padding: 10px; text-align: left; border-bottom: 1px solid #dee2e6;">Aula</th>
-                    <th style="padding: 10px; text-align: center; border-bottom: 1px solid #dee2e6;">Día</th>
-                    <th style="padding: 10px; text-align: center; border-bottom: 1px solid #dee2e6;">Estado</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($grupo->asignaciones as $asignacion)
-                <tr style="border-bottom: 1px solid #f1f3f4;">
-                    <td style="padding: 10px;">
-                        {{ date('H:i', strtotime($asignacion->horario->hora_inicio)) }} - 
-                        {{ date('H:i', strtotime($asignacion->horario->hora_fin)) }}
-                    </td>
-                    <td style="padding: 10px;">{{ $asignacion->aula->nombre_aula }}</td>
-                    <td style="padding: 10px; text-align: center;">
-                        @php
-                            $dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-                        @endphp
-                        {{ $dias[$asignacion->horario->dia_semana] }}
-                    </td>
-                    <td style="padding: 10px; text-align: center;">
-                        <span style="background: #28a745; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">
-                            Activa
-                        </span>
-                    </td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
     </div>
-</div>
-@endif
 
-<div style="margin-top: 20px; background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #ffc107;">
-    <h4 style="margin: 0 0 10px 0; color: #856404;">Consideraciones</h4>
-    <ul style="margin: 0; padding-left: 20px; color: #666; font-size: 14px;">
-        <li>Los cambios en la materia pueden afectar las asignaciones existentes</li>
-        <li>Cambiar el estado a "inactivo" ocultará el grupo de nuevas asignaciones</li>
-        <li>El número de estudiantes debe considerar la capacidad de las aulas asignadas</li>
-        <li>Los cambios de docente se reflejarán inmediatamente en todas las asignaciones</li>
-    </ul>
+    @if($errors->any())
+        <div class="alert alert-danger">
+            <h5>Por favor corrige los siguientes errores:</h5>
+            <ul class="mb-0">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <!-- Información actual -->
+    <div class="card mb-3">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Información Actual</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <strong>Materia:</strong> {{ $grupo->materia->nombre_materia }}
+                </div>
+                <div class="col-md-4">
+                    <strong>Código:</strong> {{ $grupo->materia->codigo_materia }}
+                </div>
+                <div class="col-md-4">
+                    <strong>Asignaciones:</strong> 
+                    <span class="badge bg-success">{{ $grupo->asignaciones->count() }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario de edición -->
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="{{ route('grupos.update', $grupo->grupo_id) }}">
+                @csrf
+                @method('PUT')
+                
+                <div class="mb-3">
+                    <label for="materia_id" class="form-label">
+                        Materia <span class="text-danger">*</span>
+                    </label>
+                    <select name="materia_id" id="materia_id" class="form-select @error('materia_id') is-invalid @enderror" required>
+                        <option value="">Seleccione una materia</option>
+                        @foreach($materias as $materia)
+                            <option value="{{ $materia->materia_id }}" 
+                                    {{ old('materia_id', $grupo->materia_id) == $materia->materia_id ? 'selected' : '' }}
+                                    data-creditos="{{ $materia->creditos }}">
+                                {{ $materia->codigo_materia }} - {{ $materia->nombre_materia }} ({{ $materia->creditos }} créditos)
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('materia_id')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                    @if($grupo->asignaciones->count() > 0)
+                        <small class="text-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Cambiar la materia afectará las {{ $grupo->asignaciones->count() }} asignación(es) existente(s)
+                        </small>
+                    @endif
+                </div>
+
+                <div class="mb-3">
+                    <label for="nombre_grupo" class="form-label">
+                        Nombre del Grupo <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" 
+                           name="nombre_grupo" 
+                           id="nombre_grupo" 
+                           class="form-control @error('nombre_grupo') is-invalid @enderror"
+                           value="{{ old('nombre_grupo', $grupo->nombre_grupo) }}"
+                           placeholder="Ej: SI100-1, Grupo A, etc."
+                           maxlength="50"
+                           required>
+                    @error('nombre_grupo')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                    <small class="text-muted">Nombre identificativo del grupo (máximo 50 caracteres)</small>
+                </div>
+
+                <div class="mb-3">
+                    <label for="capacidad_maxima" class="form-label">
+                        Capacidad Máxima <span class="text-danger">*</span>
+                    </label>
+                    <input type="number" 
+                           name="capacidad_maxima" 
+                           id="capacidad_maxima" 
+                           class="form-control @error('capacidad_maxima') is-invalid @enderror"
+                           value="{{ old('capacidad_maxima', $grupo->capacidad_maxima) }}"
+                           min="1"
+                           max="200"
+                           required>
+                    @error('capacidad_maxima')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                    <small class="text-muted">Número máximo de estudiantes (1-200)</small>
+                </div>
+
+                <!-- Información de la materia seleccionada -->
+                <div id="materia-info" class="alert alert-info">
+                    <h6>Información de la Materia:</h6>
+                    <div id="materia-details"></div>
+                </div>
+
+                <!-- Advertencia de capacidad -->
+                <div id="capacidad-warning" class="alert alert-warning" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span id="capacidad-text"></span>
+                </div>
+
+                <div class="d-flex gap-2 justify-content-end">
+                    <a href="{{ route('grupos.show', $grupo->grupo_id) }}" class="btn btn-secondary">
+                        Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save"></i> Actualizar Grupo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Asignaciones afectadas -->
+    @if($grupo->asignaciones->count() > 0)
+    <div class="card mt-3">
+        <div class="card-header bg-warning">
+            <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Asignaciones que serán afectadas</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Día</th>
+                            <th>Horario</th>
+                            <th>Aula</th>
+                            <th>Docente</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($grupo->asignaciones as $asignacion)
+                        <tr>
+                            <td>{{ $asignacion->horario->dia_semana }}</td>
+                            <td>
+                                {{ date('H:i', strtotime($asignacion->horario->hora_inicio)) }} - 
+                                {{ date('H:i', strtotime($asignacion->horario->hora_fin)) }}
+                            </td>
+                            <td>{{ $asignacion->aula->nombre_aula }}</td>
+                            <td>{{ $asignacion->docente->usuario->nombre ?? 'N/A' }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <div class="card mt-3">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fas fa-info-circle"></i> Consideraciones</h5>
+        </div>
+        <div class="card-body">
+            <ul class="mb-0">
+                <li>Los cambios en la materia pueden afectar las asignaciones existentes</li>
+                <li>La capacidad debe considerar el tamaño de las aulas asignadas</li>
+                <li>El nombre del grupo debe ser único para cada materia</li>
+            </ul>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -256,13 +193,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const materiaSelect = document.getElementById('materia_id');
     const materiaInfo = document.getElementById('materia-info');
     const materiaDetails = document.getElementById('materia-details');
-    const estudiantesInput = document.getElementById('estudiantes_inscritos');
+    const capacidadInput = document.getElementById('capacidad_maxima');
     const capacidadWarning = document.getElementById('capacidad-warning');
     const capacidadText = document.getElementById('capacidad-text');
-    const descripcionTextarea = document.getElementById('descripcion');
-    const descripcionCounter = document.getElementById('descripcion-counter');
 
-    // Mostrar información de la materia seleccionada
     function mostrarInfoMateria() {
         const selectedOption = materiaSelect.options[materiaSelect.selectedIndex];
         if (selectedOption.value) {
@@ -280,44 +214,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Verificar capacidad de estudiantes
     function verificarCapacidad() {
-        const numEstudiantes = parseInt(estudiantesInput.value) || 0;
+        const valor = parseInt(capacidadInput.value) || 0;
         
-        if (numEstudiantes > 50) {
-            capacidadText.textContent = `${numEstudiantes} estudiantes es un grupo muy grande. Considere dividirlo en grupos más pequeños para mejor atención.`;
+        if (valor > 50) {
+            capacidadText.textContent = `${valor} estudiantes es un grupo muy grande. Considere dividirlo.`;
             capacidadWarning.style.display = 'block';
-        } else if (numEstudiantes > 0 && numEstudiantes < 5) {
-            capacidadText.textContent = `${numEstudiantes} estudiantes es un grupo muy pequeño. Verifique si es viable mantener este grupo.`;
+        } else if (valor > 0 && valor < 10) {
+            capacidadText.textContent = `${valor} estudiantes es un grupo muy pequeño.`;
             capacidadWarning.style.display = 'block';
         } else {
             capacidadWarning.style.display = 'none';
         }
     }
 
-    // Contador de caracteres para descripción
-    function actualizarContador() {
-        const longitud = descripcionTextarea.value.length;
-        descripcionCounter.textContent = `${longitud} / 500 caracteres`;
-        
-        if (longitud > 450) {
-            descripcionCounter.style.color = '#dc3545';
-        } else if (longitud > 400) {
-            descripcionCounter.style.color = '#ffc107';
-        } else {
-            descripcionCounter.style.color = '#666';
-        }
-    }
-
-    // Event listeners
     materiaSelect.addEventListener('change', mostrarInfoMateria);
-    estudiantesInput.addEventListener('input', verificarCapacidad);
-    descripcionTextarea.addEventListener('input', actualizarContador);
+    capacidadInput.addEventListener('input', verificarCapacidad);
 
     // Inicializar
     mostrarInfoMateria();
     verificarCapacidad();
-    actualizarContador();
 });
 </script>
 @endsection

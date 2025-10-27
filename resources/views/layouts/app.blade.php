@@ -1,57 +1,34 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="manifest" href="/manifest.json" />
-    <title>FICCT Scheduling</title>
-    @vite(['resources/css/app.css','resources/js/app.js'])
-    <style>
-        body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:0}
-        header{background:#0d6efd;color:#fff;padding:12px}
-        nav a{color:#fff;margin-right:12px;text-decoration:none}
-        .container{max-width:1100px;margin:20px auto;padding:0 16px}
-        footer{margin-top:40px;color:#666;padding:12px 16px;border-top:1px solid #eee}
-        .nav-right{float:right}
-        .nav-user{margin-right:8px;opacity:0.9}
-        .btn-logout{background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.7);padding:6px 10px;border-radius:6px;cursor:pointer}
-        .btn-logout:hover{background:rgba(255,255,255,0.15)}
-    </style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sistema de Gestión Académica</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-<header>
-    <nav>
-        <a href="/">Dashboard</a>
-        <a href="/schedules">Schedules</a>
-        @auth
-            @if(auth()->user()->hasRole('admin'))
-                <a href="{{ route('faculty_members.index') }}">Faculty</a>
-                <a href="{{ route('users.import.form') }}">Import Users</a>
-                <a href="{{ route('attendance.index') }}">Attendance</a>
-            @endif
-            @if(auth()->user()->hasRole('instructor'))
-                <a href="{{ route('attendance.create') }}">Record Attendance</a>
-            @endif
-            <span class="nav-right">
-                <span class="nav-user">{{ auth()->user()->name }}</span>
-                <form method="POST" action="{{ route('logout') }}" style="display:inline">
-                    @csrf
-                    <button type="submit" class="btn-logout">Logout</button>
-                </form>
-            </span>
-        @endauth
-        @guest
-            <span class="nav-right">
-                <a href="{{ route('login') }}">Login</a>
-            </span>
-        @endguest
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ route('dashboard') }}">Gestión SI</a>
+            <div class="navbar-nav ms-auto">
+                @auth
+                    <span class="navbar-text me-3">Hola, {{ Auth::user()->nombre }}</span>
+                    <a class="nav-link" href="{{ route('logout') }}" 
+                       onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                        Cerrar sesión
+                    </a>
+                    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+                        @csrf
+                    </form>
+                @endauth
+            </div>
+        </div>
     </nav>
-</header>
-<div class="container">
-    @yield('content')
-</div>
-<footer>
-    <small>FICCT Scheduling · Responsive PWA-ready</small>
-</footer>
+
+    <main class="py-4">
+        @yield('content')
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

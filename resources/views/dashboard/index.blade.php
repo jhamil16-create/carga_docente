@@ -1,12 +1,26 @@
 @extends('layouts.app')
 
 @section('content')
-<h1>Administrative Dashboard</h1>
-<p>The system is scaffolded for departments, subjects, groups, classrooms, schedules, and attendance.</p>
-@if(!$dbReady)
-    <div style="padding:12px;background:#fff3cd;color:#664d03;border:1px solid #ffecb5;">Database not configured yet. Once migrations run on PostgreSQL, data will appear here.</div>
-@endif
-<ul>
-    <li><a href="{{ route('schedules.index') }}">Manage schedules</a></li>
-</ul>
+<div class="container">
+    <h1>Dashboard - Sistema de Gestión Académica</h1>
+    <p>Bienvenido, {{ Auth::user()->nombre }}.</p>
+
+    <div class="mt-4">
+        <h3>Módulos disponibles:</h3>
+        <ul class="list-group">
+            <li class="list-group-item">
+                <a href="{{ route('usuarios.index') }}">Gestión de Usuarios</a>
+            </li>
+            <li class="list-group-item">
+                <a href="{{ route('carga-masiva.index') }}">Carga Masiva de Usuarios</a>
+            </li>
+            <li class="list-group-item">
+                <a href="{{ route('asistencias.index') }}">Registro de Asistencia</a>
+            </li>
+            <li class="list-group-item">
+                <a href="{{ route('grupos.index') }}">Gestión de Grupos</a>
+            </li> 
+        </ul>
+    </div>
+</div>
 @endsection

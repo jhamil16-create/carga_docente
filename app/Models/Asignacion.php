@@ -2,16 +2,16 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Asignacion extends Model
 {
-    use HasFactory;
-
-    protected $table = 'asignaciones';
+    protected $table = 'asignacion';
     protected $primaryKey = 'asignacion_id';
-    
+    public $timestamps = false;
+
     protected $fillable = [
         'docente_id',
         'grupo_id',
@@ -21,46 +21,31 @@ class Asignacion extends Model
     ];
 
     protected $casts = [
-        'fecha_asignacion' => 'date',
+        'fecha_asignacion' => 'datetime'
     ];
 
-    /**
-     * Relación con docente
-     */
-    public function docente()
+    public function docente(): BelongsTo
     {
         return $this->belongsTo(Docente::class, 'docente_id', 'docente_id');
     }
 
-    /**
-     * Relación con grupo
-     */
-    public function grupo()
+    public function grupo(): BelongsTo
     {
         return $this->belongsTo(Grupo::class, 'grupo_id', 'grupo_id');
     }
 
-    /**
-     * Relación con aula
-     */
-    public function aula()
+    public function asistencias(): HasMany
+    {
+        return $this->hasMany(Asistencia::class, 'asignacion_id', 'asignacion_id');
+    }
+
+    public function aula(): BelongsTo
     {
         return $this->belongsTo(Aula::class, 'aula_id', 'aula_id');
     }
 
-    /**
-     * Relación con horario
-     */
-    public function horario()
+    public function horario(): BelongsTo
     {
         return $this->belongsTo(Horario::class, 'horario_id', 'horario_id');
-    }
-
-    /**
-     * Relación con asistencias
-     */
-    public function asistencias()
-    {
-        return $this->hasMany(Asistencia::class, 'asignacion_id', 'asignacion_id');
     }
 }

@@ -8,109 +8,89 @@ use Illuminate\Support\Facades\Validator;
 
 class MateriaController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function listarMaterias()
     {
-        $materias = Materia::with('grupos')->paginate(10);
-        return view('materias.index', compact('materias'));
+        $materias = Materia::with('grupos')
+            ->orderBy('nombre_materia')
+            ->get();
+
+        return response()->json([
+            'materias' => $materias
+        ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function obtenerMateria($materia_id)
     {
-        return view('materias.create');
+        $materia = Materia::with('grupos')
+            ->findOrFail($materia_id);
+
+        return response()->json([
+            'materia' => $materia
+        ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function crearMateria(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'nombre_materia' => 'required|string|max:100',
-            'codigo_materia' => 'required|string|max:20|unique:materias,codigo_materia',
+            'nombre_materia' => 'required|string|max:100|unique:materia,nombre_materia',
+            'codigo_materia' => 'required|string|max:20|unique:materia,codigo_materia',
             'creditos' => 'required|integer|min:1|max:10'
         ]);
 
         if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
+            return response()->json([
+                'mensaje' => 'Datos de materia inválidos',
+                'errores' => $validator->errors()
+            ], 422);
         }
 
-        Materia::create($request->all());
+        $materia = Materia::create($request->all());
 
-        return redirect()->route('materias.index')
-            ->with('success', 'Materia creada exitosamente.');
+        return response()->json([
+            'mensaje' => 'Materia creada correctamente',
+            'materia' => $materia
+        ], 201);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Materia $materia)
+    public function actualizarMateria(Request $request, $materia_id)
     {
-        $materia->load('grupos.asignaciones.docente.usuario');
-        return view('materias.show', compact('materia'));
-    }
+        $materia = Materia::findOrFail($materia_id);
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Materia $materia)
-    {
-        return view('materias.edit', compact('materia'));
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Materia $materia)
-    {
         $validator = Validator::make($request->all(), [
-            'nombre_materia' => 'required|string|max:100',
-            'codigo_materia' => 'required|string|max:20|unique:materias,codigo_materia,' . $materia->materia_id . ',materia_id',
+            'nombre_materia' => 'required|string|max:100|unique:materia,nombre_materia,' . $materia_id . ',materia_id',
+            'codigo_materia' => 'required|string|max:20|unique:materia,codigo_materia,' . $materia_id . ',materia_id',
             'creditos' => 'required|integer|min:1|max:10'
         ]);
 
         if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
+            return response()->json([
+                'mensaje' => 'Datos de actualización inválidos',
+                'errores' => $validator->errors()
+            ], 422);
         }
 
         $materia->update($request->all());
 
-        return redirect()->route('materias.index')
-            ->with('success', 'Materia actualizada exitosamente.');
+        return response()->json([
+            'mensaje' => 'Materia actualizada correctamente',
+            'materia' => $materia
+        ]);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Materia $materia)
+    public function eliminarMateria($materia_id)
     {
-        // Verificar si la materia tiene grupos asociados
-        if ($materia->grupos()->count() > 0) {
-            return redirect()->route('materias.index')
-                ->with('error', 'No se puede eliminar la materia porque tiene grupos asociados.');
+        $materia = Materia::findOrFail($materia_id);
+
+        if ($materia->grupos()->exists()) {
+            return response()->json([
+                'mensaje' => 'No se puede eliminar la materia porque tiene grupos asociados'
+            ], 422);
         }
 
         $materia->delete();
 
-        return redirect()->route('materias.index')
-            ->with('success', 'Materia eliminada exitosamente.');
-    }
-
-    /**
-     * API endpoint para obtener materias
-     */
-    public function api()
-    {
-        $materias = Materia::all();
-        return response()->json($materias);
+        return response()->json([
+            'mensaje' => 'Materia eliminada correctamente'
+        ]);
     }
 }

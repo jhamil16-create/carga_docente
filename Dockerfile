@@ -12,7 +12,7 @@ RUN apk add --no-cache \
         mariadb-dev \
         libzip-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql pdo_pgsql zip \
+    && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql pdo_pgsql zip opcache \
     && apk del $PHPIZE_DEPS
 COPY composer.json composer.lock .
 RUN composer install --no-dev --no-interaction --prefer-dist --no-progress --no-scripts
@@ -29,8 +29,19 @@ RUN npm run build
 FROM php:8.2-fpm-alpine AS php
 RUN apk add --no-cache $PHPIZE_DEPS \
     postgresql-dev \
-    && docker-php-ext-install pdo pdo_mysql pdo_pgsql \
+    && docker-php-ext-install pdo pdo_mysql pdo_pgsql opcache \
     && apk del $PHPIZE_DEPS
+
+# PHP configuration
+COPY php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
+COPY php.ini-production /usr/local/etc/php/php.ini
+
+# Enable OPcache
+RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "opcache.memory_consumption=256" >> /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "opcache.interned_strings_buffer=16" >> /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "opcache.max_accelerated_files=16000" >> /usr/local/etc/php/conf.d/opcache.ini
+
 WORKDIR /var/www/html
 
 FROM nginx:alpine AS web
@@ -41,6 +52,6 @@ COPY --from=assets /app/public/build /var/www/html/public/build
 COPY . .
 
 # Nginx conf
-RUN echo "server {\n  listen 80;\n  server_name _;\n  root /var/www/html/public;\n  index index.php index.html;\n  location / { try_files $uri $uri/ /index.php?$query_string; }\n  location ~ \\.(php|phar)$ {\n    include fastcgi_params;\n    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;\n    fastcgi_pass php:9000;\n  }\n}\n" > /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # 3) Final: Use docker-compose to run php+nginx

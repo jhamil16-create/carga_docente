@@ -4,38 +4,61 @@ namespace App\Http\Controllers;
 
 use App\Models\Grupo;
 use App\Models\Materia;
+use App\Models\Docente;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class GrupoController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Mostrar listado de grupos
      */
-    public function index()
+    public function index(Request $request)
     {
-        $grupos = Grupo::with('materia', 'asignaciones.docente.usuario')->paginate(10);
-        return view('grupos.index', compact('grupos'));
+        $query = Grupo::with(['materia', 'asignaciones.docente.usuario']);
+
+        // Filtros
+        if ($request->has('materia_id') && $request->materia_id) {
+            $query->where('materia_id', $request->materia_id);
+        }
+
+        $grupos = $query->orderBy('materia_id')
+            ->orderBy('nombre_grupo')
+            ->paginate(15);
+
+        $materias = Materia::orderBy('nombre_materia')->get();
+
+        return view('grupos.index', compact('grupos', 'materias'));
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Mostrar formulario de creación
      */
     public function create()
     {
-        $materias = Materia::all();
+        $materias = Materia::orderBy('nombre_materia')->get();
+        
         return view('grupos.create', compact('materias'));
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Guardar nuevo grupo
      */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'materia_id' => 'required|exists:materias,materia_id',
+            'materia_id' => 'required|exists:materia,materia_id',
             'nombre_grupo' => 'required|string|max:50',
-            'capacidad_maxima' => 'required|integer|min:1|max:100'
+            'capacidad_maxima' => 'required|integer|min:1|max:200'
+        ], [
+            'materia_id.required' => 'Debe seleccionar una materia',
+            'materia_id.exists' => 'La materia seleccionada no existe',
+            'nombre_grupo.required' => 'El nombre del grupo es obligatorio',
+            'nombre_grupo.max' => 'El nombre del grupo no puede exceder 50 caracteres',
+            'capacidad_maxima.required' => 'La capacidad máxima es obligatoria',
+            'capacidad_maxima.integer' => 'La capacidad debe ser un número entero',
+            'capacidad_maxima.min' => 'La capacidad mínima es 1',
+            'capacidad_maxima.max' => 'La capacidad máxima es 200'
         ]);
 
         if ($validator->fails()) {
@@ -44,50 +67,65 @@ class GrupoController extends Controller
                 ->withInput();
         }
 
-        // Verificar que no exista un grupo con el mismo nombre para la misma materia
+        // Verificar si ya existe un grupo con el mismo nombre para la materia
         $existeGrupo = Grupo::where('materia_id', $request->materia_id)
             ->where('nombre_grupo', $request->nombre_grupo)
             ->exists();
 
         if ($existeGrupo) {
             return redirect()->back()
-                ->withErrors(['nombre_grupo' => 'Ya existe un grupo con este nombre para la materia seleccionada.'])
+                ->withErrors(['nombre_grupo' => 'Ya existe un grupo con este nombre para esta materia'])
                 ->withInput();
         }
 
-        Grupo::create($request->all());
+        Grupo::create($request->only(['materia_id', 'nombre_grupo', 'capacidad_maxima']));
 
         return redirect()->route('grupos.index')
-            ->with('success', 'Grupo creado exitosamente.');
+            ->with('success', 'Grupo creado exitosamente');
     }
 
     /**
-     * Display the specified resource.
+     * Mostrar detalle del grupo
      */
-    public function show(Grupo $grupo)
+    public function show($grupo_id)
     {
-        $grupo->load('materia', 'asignaciones.docente.usuario', 'asignaciones.aula', 'asignaciones.horario');
+        $grupo = Grupo::with(['materia', 'asignaciones.docente.usuario', 'asignaciones.aula', 'asignaciones.horario'])
+            ->findOrFail($grupo_id);
+
         return view('grupos.show', compact('grupo'));
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * Mostrar formulario de edición
      */
-    public function edit(Grupo $grupo)
+    public function edit($grupo_id)
     {
-        $materias = Materia::all();
+        $grupo = Grupo::findOrFail($grupo_id);
+        $materias = Materia::orderBy('nombre_materia')->get();
+
         return view('grupos.edit', compact('grupo', 'materias'));
     }
 
     /**
-     * Update the specified resource in storage.
+     * Actualizar grupo
      */
-    public function update(Request $request, Grupo $grupo)
+    public function update(Request $request, $grupo_id)
     {
+        $grupo = Grupo::findOrFail($grupo_id);
+
         $validator = Validator::make($request->all(), [
-            'materia_id' => 'required|exists:materias,materia_id',
+            'materia_id' => 'required|exists:materia,materia_id',
             'nombre_grupo' => 'required|string|max:50',
-            'capacidad_maxima' => 'required|integer|min:1|max:100'
+            'capacidad_maxima' => 'required|integer|min:1|max:200'
+        ], [
+            'materia_id.required' => 'Debe seleccionar una materia',
+            'materia_id.exists' => 'La materia seleccionada no existe',
+            'nombre_grupo.required' => 'El nombre del grupo es obligatorio',
+            'nombre_grupo.max' => 'El nombre del grupo no puede exceder 50 caracteres',
+            'capacidad_maxima.required' => 'La capacidad máxima es obligatoria',
+            'capacidad_maxima.integer' => 'La capacidad debe ser un número entero',
+            'capacidad_maxima.min' => 'La capacidad mínima es 1',
+            'capacidad_maxima.max' => 'La capacidad máxima es 200'
         ]);
 
         if ($validator->fails()) {
@@ -96,47 +134,40 @@ class GrupoController extends Controller
                 ->withInput();
         }
 
-        // Verificar que no exista otro grupo con el mismo nombre para la misma materia
+        // Verificar si ya existe otro grupo con el mismo nombre para la materia
         $existeGrupo = Grupo::where('materia_id', $request->materia_id)
             ->where('nombre_grupo', $request->nombre_grupo)
-            ->where('grupo_id', '!=', $grupo->grupo_id)
+            ->where('grupo_id', '!=', $grupo_id)
             ->exists();
 
         if ($existeGrupo) {
             return redirect()->back()
-                ->withErrors(['nombre_grupo' => 'Ya existe un grupo con este nombre para la materia seleccionada.'])
+                ->withErrors(['nombre_grupo' => 'Ya existe otro grupo con este nombre para esta materia'])
                 ->withInput();
         }
 
-        $grupo->update($request->all());
+        $grupo->update($request->only(['materia_id', 'nombre_grupo', 'capacidad_maxima']));
 
-        return redirect()->route('grupos.index')
-            ->with('success', 'Grupo actualizado exitosamente.');
+        return redirect()->route('grupos.show', $grupo_id)
+            ->with('success', 'Grupo actualizado exitosamente');
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Eliminar grupo
      */
-    public function destroy(Grupo $grupo)
+    public function destroy($grupo_id)
     {
-        // Verificar si el grupo tiene asignaciones
-        if ($grupo->asignaciones()->count() > 0) {
+        $grupo = Grupo::findOrFail($grupo_id);
+
+        // Verificar si tiene asignaciones
+        if ($grupo->asignaciones()->exists()) {
             return redirect()->route('grupos.index')
-                ->with('error', 'No se puede eliminar el grupo porque tiene asignaciones activas.');
+                ->with('error', 'No se puede eliminar el grupo porque tiene asignaciones activas');
         }
 
         $grupo->delete();
 
         return redirect()->route('grupos.index')
-            ->with('success', 'Grupo eliminado exitosamente.');
-    }
-
-    /**
-     * API endpoint para obtener grupos por materia
-     */
-    public function porMateria($materia_id)
-    {
-        $grupos = Grupo::where('materia_id', $materia_id)->get();
-        return response()->json($grupos);
+            ->with('success', 'Grupo eliminado exitosamente');
     }
 }

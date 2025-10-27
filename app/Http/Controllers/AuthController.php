@@ -2,36 +2,52 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
+
+    public function index()
+    {
+        $usuarios = Usuario::with('rol')->get(); // Cargar usuarios con sus roles
+        
+        return view('usuarios.index', compact('usuarios'));
+    }
+
     public function showLoginForm()
     {
         return view('auth.login');
     }
 
-    public function showLogoutConfirm()
-    {
-        return view('auth.logout_confirm');
-    }
-
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => ['required','email'],
-            'password' => ['required'],
+        $validator = Validator::make($request->all(), [
+            'email_institucional' => 'required|email',
+            'contraseña' => 'required|string'
         ]);
 
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
-            $request->session()->regenerate();
-            return redirect()->intended(route('dashboard'));
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        return back()->withErrors([
-            'email' => 'Invalid credentials.',
-        ])->onlyInput('email');
+        $usuario = Usuario::where('email_institucional', $request->email_institucional)
+            ->where('activo', true)
+            ->first();
+
+        if (!$usuario || !Hash::check($request->contraseña, $usuario->contraseña_hash)) {
+            return back()->withErrors([
+                'email_institucional' => 'Credenciales incorrectas.'
+            ]);
+        }
+
+        Auth::login($usuario);
+
+        return redirect()->intended('/dashboard');
     }
 
     public function logout(Request $request)
@@ -39,6 +55,7 @@ class AuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        return redirect()->route('login');
+
+        return redirect('/login');
     }
 }

@@ -2,50 +2,38 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Asistencia extends Model
 {
-    use HasFactory;
-
     protected $table = 'asistencia';
     protected $primaryKey = 'asistencia_id';
-    
+    public $timestamps = false;
+
     protected $fillable = [
+        'docente_id',
         'asignacion_id',
         'fecha',
-        'hora_registro',
+        'hora_entrada',
         'estado',
-        'observaciones'
+        'metodo_registro'
     ];
 
+    // No necesitas casts si no los usas, pero si quieres:
     protected $casts = [
         'fecha' => 'date',
-        'hora_registro' => 'datetime:H:i',
+        'hora_entrada' => 'datetime', // o 'time' si solo usas hora
     ];
 
-    /**
-     * Relación con asignación
-     */
-    public function asignacion()
+    // Relaciones
+    public function docente(): BelongsTo
+    {
+        return $this->belongsTo(Docente::class, 'docente_id', 'docente_id');
+    }
+
+    public function asignacion(): BelongsTo
     {
         return $this->belongsTo(Asignacion::class, 'asignacion_id', 'asignacion_id');
-    }
-
-    /**
-     * Scope para filtrar por estado
-     */
-    public function scopePorEstado($query, $estado)
-    {
-        return $query->where('estado', $estado);
-    }
-
-    /**
-     * Scope para filtrar por fecha
-     */
-    public function scopePorFecha($query, $fecha)
-    {
-        return $query->where('fecha', $fecha);
     }
 }
